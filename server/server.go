@@ -24,6 +24,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
 
 	gofast "github.com/lvsiquan/gofast"
@@ -58,7 +59,7 @@ func Start() {
 	os.Setenv("MAX_QUEUE", "200")
 	d := gofast.NewDispatcher()
 
-	var fileMap map[string]*os.File = make(map[string]*os.File)
+	var fileMap sync.Map
 
 	go d.Run(func(job gofast.Job) {
 		payload := job.Payload.(*log)
@@ -66,9 +67,9 @@ func Start() {
 		yesterday := now.AddDate(0, 0, -1)
 		logfile := payload.From + "-" + LOGFILE_PRIFIX + now.Format("2006_01_02") + ".log"
 		var file *os.File
-		v, ok := fileMap[logfile]
+		v, ok := fileMap.Load(logfile)
 		if ok {
-			file = v
+			file = v.(*os.File)
 		} else {
 			file, err := os.OpenFile(logfile, os.O_WRONLY|os.O_APPEND, 0666)
 
@@ -84,13 +85,16 @@ func Start() {
 				if err == nil {
 					files := []*os.File{yesFile}
 					go Compress(files, yesLogfile+".tar.gz")
-					fileMap[yesLogfile].Close()
-					delete(fileMap, yesLogfile)
+					v, ok := fileMap.Load(yesLogfile)
+					if ok {
+						v.(*os.File).Close()
+					}
+					fileMap.Delete(yesLogfile)
 				}
 
 			}
 
-			fileMap[logfile] = file
+			fileMap.Store(logfile, file)
 
 		}
 
