@@ -31,7 +31,7 @@ func Start() {
 	defer conn.Close()
 
 	logfile := *logpath
-	t, err := tail.TailFile(logfile, tail.Config{Follow: true})
+	t, err := tail.TailFile(logfile, tail.Config{Follow: true, ReOpen: true})
 	if err != nil {
 		fmt.Println("Tailf [" + logfile + "] error")
 		os.Exit(1)
