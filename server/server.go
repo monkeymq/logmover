@@ -67,6 +67,7 @@ func Start() {
 		yesterday := now.AddDate(0, 0, -1)
 		logfile := payload.From + "-" + LOGFILE_PRIFIX + now.Format("2006_01_02") + ".log"
 		var file *os.File
+		defer file.Close()
 		v, ok := fileMap.Load(logfile)
 		if ok {
 			file = v.(*os.File)
@@ -98,7 +99,6 @@ func Start() {
 
 		}
 
-		// defer file.Close()
 		file.WriteString(payload.Log + "\n")
 
 	})
@@ -109,15 +109,15 @@ func Start() {
 		for {
 			if data, err := ringBuffer.Get(); err == nil {
 				job := gofast.Job{Payload: data}
-				gofast.JobQueue <- job
+				d.JobQueue <- job
 			} else {
 				continue
 			}
 		}
 	}(ringBuffer)
 
+	var buf = make([]byte, 1024)
 	for {
-		var buf = make([]byte, 1024)
 		n, from, err := conn.ReadFromUDP(buf[0:])
 		if err != nil {
 			fmt.Println("Read from UDP failed!!!")
